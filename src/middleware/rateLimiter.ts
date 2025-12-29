@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import { rateLimit } from "express-rate-limit";
 
 // Base rate limiter configuration
 const createRateLimiter = (windowMs: number, max: number, message: string) => {
