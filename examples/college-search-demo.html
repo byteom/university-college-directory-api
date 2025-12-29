@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College API Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f9fafb; color: #111; }
+        
+        /* Stats Cards */
+        .stats-container { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { flex: 1; background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; }
+        .stat-number { font-size: 2.5rem; font-weight: 700; color: #2563eb; display: block; }
+        .stat-label { color: #666; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Search Section */
+        .search-container { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .search-box { width: 100%; padding: 16px; font-size: 18px; border: 2px solid #e5e7eb; border-radius: 10px; margin-bottom: 1rem; transition: border-color 0.2s; box-sizing: border-box; }
+        .search-box:focus { outline: none; border-color: #2563eb; }
+        
+        /* Results */
+        .results { list-style: none; padding: 0; margin: 0; }
+        .result-item { padding: 16px; border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
+        .result-item:hover { background: #f8fafc; }
+        .result-item:last-child { border-bottom: none; }
+        .college-name { font-size: 1.1rem; font-weight: 600; color: #1f2937; margin-bottom: 4px; display: block; }
+        .college-meta { font-size: 0.85rem; color: #6b7280; display: flex; gap: 12px; }
+        .tag { background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+        
+        .loading { color: #888; text-align: center; padding: 20px; display: none; }
+        .nav-link { display: inline-block; margin-bottom: 1rem; color: #2563eb; text-decoration: none; }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="search-demo.html" class="nav-link">← Back to University Search</a>
+
+    <!-- Stats Section -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <span class="stat-number" id="univCount">-</span>
+            <span class="stat-label">Universities</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="collegeCount">-</span>
+            <span class="stat-label">Colleges</span>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-container">
+        <h1>Search Colleges</h1>
+        <input type="text" class="search-box" placeholder="Type college name (e.g. Engineering, Medical, Arts...)" id="searchInput">
+        <div class="loading" id="loading">Searching database...</div>
+        <ul class="results" id="results"></ul>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        
+        // 1. Load Stats
+        async function loadStats() {
+            try {
+                // Fetch 1 item just to get the total count from pagination metadata
+                const [univRes, collegeRes] = await Promise.all([
+                    fetch(`${API_BASE}/universities?limit=1`),
+                    fetch(`${API_BASE}/colleges?limit=1`)
+                ]);
+
+                const univData = await univRes.json();
+                const collegeData = await collegeRes.json();
+
+                if (univData.success) document.getElementById('univCount').textContent = univData.pagination.total.toLocaleString();
+                if (collegeData.success) document.getElementById('collegeCount').textContent = collegeData.pagination.total.toLocaleString();
+            } catch (err) {
+                console.error("Failed to load stats:", err);
+            }
+        }
+        loadStats();
+
+        // 2. Search Logic
+        const input = document.getElementById('searchInput');
+        const results = document.getElementById('results');
+        const loading = document.getElementById('loading');
+        let debounceTimer;
+
+        input.addEventListener('input', (e) => {
+            const query = e.target.value;
+            clearTimeout(debounceTimer);
+            
+            if (query.length < 2) {
+                results.innerHTML = '';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => searchColleges(query), 300);
+        });
+
+        async function searchColleges(query) {
+            loading.style.display = 'block';
+            results.innerHTML = '';
+
+            try {
+                // Using the /names endpoint for lighter search, or main endpoint for details
+                // Let's use the main endpoint so we get State and University info
+                const response = await fetch(`${API_BASE}/colleges?search=${encodeURIComponent(query)}&limit=20`);
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    displayResults(data.data);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                results.innerHTML = '<div style="padding:20px; color:red; text-align:center">Error fetching data</div>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(items) {
+            if (items.length === 0) {
+                results.innerHTML = '<div style="padding:20px; text-align:center; color:#666">No colleges found</div>';
+                return;
+            }
+
+            results.innerHTML = items.map(item => `
+                <li class="result-item">
+                    <span class="college-name">${item.name}</span>
+                    <div class="college-meta">
+                        <span class="tag">${item.state}</span>
+                        <span>University: ${item.university?.name || 'Unknown University'}</span>
+                    </div>
+                </li>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

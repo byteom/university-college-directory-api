@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>University Search Demo</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+        .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 1rem; }
+        .results { list-style: none; padding: 0; }
+        .result-item { padding: 12px; border-bottom: 1px solid #eee; }
+        .result-item strong { display: block; color: #2563eb; }
+        .result-item span { color: #666; font-size: 0.9em; }
+        .loading { color: #888; display: none; }
+    </style>
+</head>
+<body>
+    <h1>Search Universities</h1>
+    <p>Type to search real-time from the API:</p>
+    
+    <input type="text" class="search-box" placeholder="e.g. Delhi, Tech, Gandhi..." id="searchInput">
+    <div class="loading" id="loading">Searching...</div>
+    <ul class="results" id="results"></ul>
+
+    <script>
+        const input = document.getElementById('searchInput');
+        const results = document.getElementById('results');
+        const loading = document.getElementById('loading');
+        let debounceTimer;
+
+        input.addEventListener('input', (e) => {
+            const query = e.target.value;
+            clearTimeout(debounceTimer);
+            
+            if (query.length < 2) {
+                results.innerHTML = '';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => searchUniversities(query), 300);
+        });
+
+        async function searchUniversities(query) {
+            loading.style.display = 'block';
+            results.innerHTML = '';
+
+            try {
+                // CALLING YOUR API HERE
+                const response = await fetch(`http://localhost:3000/api/universities/names?search=${encodeURIComponent(query)}&limit=10`);
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    displayResults(data.data);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                results.innerHTML = '<li class="result-item" style="color:red">Error fetching data. Is the backend running?</li>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(items) {
+            if (items.length === 0) {
+                results.innerHTML = '<li class="result-item">No universities found</li>';
+                return;
+            }
+
+            results.innerHTML = items.map(item => `
+                <li class="result-item">
+                    <strong>${item.name}</strong>
+                    <span>AISHE Code: ${item.aisheCode}</span>
+                </li>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// University model - stores university information
+model University {
+  id                  String    @id @default(cuid())
+  aisheCode           String    @unique @map("aishe_code")
+  name                String
+  state               String
+  district            String
+  website             String?
+  yearOfEstablishment Int?      @map("year_of_establishment")
+  location            String?
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relation to colleges
+  colleges            College[]
+
+  @@map("universities")
+}
+
+// College model - stores college information
+model College {
+  id                    String    @id @default(cuid())
+  aisheCode             String    @unique @map("aishe_code")
+  name                  String
+  state                 String
+  district              String
+  website               String?
+  yearOfEstablishment   Int?      @map("year_of_establishment")
+  location              String?
+  collegeType           String?   @map("college_type")
+  management            String?
+  universityAisheCode   String?   @map("university_aishe_code")
+  universityName        String?   @map("university_name")
+  universityType        String?   @map("university_type")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relation to university (optional - for linking if university exists in our DB)
+  universityId          String?   @map("university_id")
+  university            University? @relation(fields: [universityId], references: [id])
+
+  @@map("colleges")
+}
